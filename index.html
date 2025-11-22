@@ -1,7 +1,7 @@
 
 <!-- ألوان وتصميم -->
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
 
   :root{
     --brand:#2563eb;          /* أزرق حديث للهوية */
@@ -17,7 +17,7 @@
   }
   html{direction:rtl}
   *{box-sizing:border-box}
-  body{font-family:"IBM Plex Sans Arabic","Cairo",system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--surface-muted);margin:0;color:var(--text-main);line-height:1.5;text-align:right}
+  body{font-family:"Cairo","Noto Sans Arabic",system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--surface-muted);margin:0;color:var(--text-main);line-height:1.5;text-align:right}
   header{background:linear-gradient(120deg,var(--brand),var(--brand-dark));color:#fff;padding:44px 22px 32px;border-bottom-left-radius:20px;border-bottom-right-radius:20px;box-shadow:var(--shadow-strong)}
   header .header-content{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:18px}
   header h1{margin:0;font-size:24px;font-weight:700;letter-spacing:.6px}
@@ -755,7 +755,6 @@ const DEFAULT_FIREBASE_CONFIG = {
           <div class="stage-meta">
             <div class="stage-status">${stageStatusTexts[status]||""}</div>
             <div class="stage-amounts">
-              <div>المستهدف: <strong>${formatCurrency(stageTarget)}</strong></div>
               <div>المحصل: <strong>${formatCurrency(stageCollected)}</strong></div>
               <div class="stage-remaining">المتبقي: ${formatCurrency(Math.max(stageTarget-stageCollected,0))}</div>
             </div>
@@ -987,15 +986,11 @@ const DEFAULT_FIREBASE_CONFIG = {
 
     $("#totalExpenses").innerHTML = formatCurrency(totalExpenses);
     const totalIncomeAmountEl = $("#totalIncomeAmount");
-    const totalIncomeTargetEl = $("#totalIncomeTarget");
     const totalIncomeShell = $("#totalIncomeProgressShell");
     const totalIncomeLabel = $("#totalIncomeProgressLabel");
 
     if(totalIncomeAmountEl){
       totalIncomeAmountEl.innerHTML = formatCurrency(totalIncome);
-    }
-    if(totalIncomeTargetEl){
-      totalIncomeTargetEl.innerHTML = `الهدف ${formatCurrency(revenueTarget)}`;
     }
     if(totalIncomeShell){
       const rawPerc = revenueTarget > 0 ? (totalIncome / revenueTarget) * 100 : 0;
@@ -1030,8 +1025,6 @@ const DEFAULT_FIREBASE_CONFIG = {
         const rawPerc = hasExpectation ? (sum/exp*100) : 0;
         const perc = hasExpectation ? Math.min(Math.max(rawPerc,0),100) : 0;
         const alertState = hasExpectation && rawPerc >= 100;
-        const remainingValue = exp - sum;
-        const subtitle = hasExpectation ? '<div class="card-subtitle">الهدف ' + formatCurrency(exp) + '</div>' : '';
         const progressLabel = hasExpectation ? `${Math.round(rawPerc)}%` : "—";
         const card = document.createElement("div");
         card.className = "card category-card clickable";
@@ -1039,7 +1032,6 @@ const DEFAULT_FIREBASE_CONFIG = {
           <div class="card-header">
             <span class="card-title">${cat}</span>
           </div>
-          ${subtitle}
           <div class="card-amount">${formatCurrency(sum)}</div>
           <div class="progress-shell" data-progress="${perc}" data-alert="${alertState}">
             <div class="progress-bar"></div>
@@ -1322,7 +1314,6 @@ const DEFAULT_FIREBASE_CONFIG = {
       <div class="card-header">
         <span class="card-title">إجمالي الإيرادات</span>
       </div>
-      <div class="card-subtitle" id="totalIncomeTarget">الهدف 983,625 <span class="currency-symbol">﷼</span></div>
       <div class="card-amount" id="totalIncomeAmount">0 <span class="currency-symbol">﷼</span></div>
       <div class="progress-shell" id="totalIncomeProgressShell" data-progress="0" data-alert="false">
         <div class="progress-bar"></div>
