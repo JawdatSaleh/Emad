@@ -263,6 +263,14 @@
   .muted{color:var(--text-muted)}
   .error-text{color:var(--danger);font-weight:700;margin:6px 0 0;display:none}
   .login{max-width:420px;margin:40px auto;text-align:center}
+  .config-link{margin-top:10px;display:inline-flex;gap:8px;align-items:center;font-weight:700;color:var(--brand);cursor:pointer;background:rgba(37,99,235,.12);border-radius:12px;padding:10px 14px;border:1px solid rgba(37,99,235,.2);text-decoration:none}
+  .config-link:hover{filter:brightness(1.03)}
+  .config-link small{color:var(--text-muted);font-weight:600}
+  .config-form{display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px}
+  .config-form label{font-size:12px;font-weight:700;color:var(--text-muted);text-align:right}
+  .config-form input{width:100%}
+  .config-form .actions{display:flex;gap:10px;justify-content:flex-start;flex-wrap:wrap;margin-top:4px}
+  .config-form .actions button{flex:1 1 120px;min-width:120px}
 </style>
 
 <!-- مكتبات التصدير -->
@@ -278,20 +286,61 @@
   import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
   import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyCNL2UEBtYSfsLRsLyqP0_Mr-Z5LxPsz4",
-  authDomain: "emad-84544.firebaseapp.com",
-  projectId: "emad-84544",
-  storageBucket: "emad-84544.firebasestorage.app",
-  messagingSenderId: "144473116668",
-  appId: "1:144473116668:web:25b629bf2c84461122ac79",
-  measurementId: "G-3JBC3VG7CE"
-};
+  const DEFAULT_FIREBASE_CONFIG = {
+    apiKey: "AIzaSyCNL2UEBtYSfsLRsLyqP0_Mr-Z5LxPsz4",
+    authDomain: "emad-84544.firebaseapp.com",
+    projectId: "emad-84544",
+    storageBucket: "emad-84544.firebasestorage.app",
+    messagingSenderId: "144473116668",
+    appId: "1:144473116668:web:25b629bf2c84461122ac79",
+    measurementId: "G-3JBC3VG7CE"
+  };
 
-  const app  = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db   = getFirestore(app);
-  const entriesRef = collection(db, "entries");
+  const getStoredFirebaseConfig = ()=>{
+    try{
+      const raw = localStorage.getItem("emadFirebaseConfig");
+      if(!raw) return null;
+      const parsed = JSON.parse(raw);
+      if(parsed?.apiKey && parsed?.authDomain && parsed?.projectId){
+        return parsed;
+      }
+    }catch(_){ /* ignore parsing issues */ }
+    return null;
+  };
+
+  const saveFirebaseConfig = (config)=>{
+    try{
+      localStorage.setItem("emadFirebaseConfig", JSON.stringify(config));
+    }catch(_){ /* ignore quota errors */ }
+  };
+
+  const loadFirebaseConfig = ()=>{
+    return getStoredFirebaseConfig() || DEFAULT_FIREBASE_CONFIG;
+  };
+
+  let firebaseApp;
+  let auth;
+  let db;
+  let entriesRef;
+  let authUnsubscribe = null;
+  let firebaseConfig = loadFirebaseConfig();
+  let firebaseInitFailed = false;
+
+  const bootFirebase = ()=>{
+    firebaseConfig = loadFirebaseConfig();
+    firebaseApp = initializeApp(firebaseConfig);
+    auth = getAuth(firebaseApp);
+    db = getFirestore(firebaseApp);
+    entriesRef = collection(db, "entries");
+    firebaseInitFailed = false;
+  };
+
+  try{
+    bootFirebase();
+  }catch(err){
+    firebaseInitFailed = true;
+    console.error("Firebase initialization failed", err);
+  }
 
   /******** الحالة العامة ********/
   const categories = ["المنزل","مصاريف شخصية","الأهل","سيارة وبنزين","إدخار","ديون"];
@@ -363,6 +412,19 @@ const firebaseConfig = {
   const loginForm = $("#loginForm");
   const emailInput = $("#email");
   const passwordInput = $("#password");
+  const firebaseConfigButton = $("#firebaseConfigButton");
+  const firebaseConfigModal = $("#firebaseConfigModal");
+  const closeFirebaseConfigModal = $("#closeFirebaseConfigModal");
+  const firebaseConfigForm = $("#firebaseConfigForm");
+  const configInputs = firebaseConfigForm ? {
+    apiKey: $("#configApiKey"),
+    authDomain: $("#configAuthDomain"),
+    projectId: $("#configProjectId"),
+    storageBucket: $("#configStorageBucket"),
+    messagingSenderId: $("#configMessagingSenderId"),
+    appId: $("#configAppId"),
+    measurementId: $("#configMeasurementId"),
+  } : {};
 
   if(shareCategoryModalBtn){
     shareCategoryModalBtn.dataset.originalText = shareCategoryModalBtn.textContent.trim();
@@ -390,7 +452,7 @@ const firebaseConfig = {
       case "auth/operation-not-allowed": return "مزود البريد/كلمة المرور غير مفعل في إعدادات Firebase.";
       case "auth/unauthorized-domain":
       case "auth/configuration-not-found": return "هذا النطاق غير مصرح به في إعدادات Firebase. افتح التطبيق من نطاق مسموح أو أضفه من لوحة التحكم.";
-      case "auth/invalid-api-key": return "مفتاح Firebase API غير صالح أو مقيّد. حدّث الإعدادات من Firebase Console.";
+      case "auth/invalid-api-key": return "مفتاح Firebase API غير صالح أو مقيّد. حدّث الإعدادات من زر \"إعدادات الاتصال\" أدناه.";
       default:
         return `تعذّر تسجيل الدخول. (${code||"unknown"})`;
     }
@@ -727,28 +789,77 @@ const firebaseConfig = {
 
   updateRevenueBreakdown(0);
 
-  /******** مصادقة ********/
-  onAuthStateChanged(auth, async (user)=>{
-    if(user){
-      currentUserEmail = user.email;
-      $("#loginBox").style.display="none";
-      $("#app").style.display="block";
-      showLoginError("");
-      $("#userEmail").textContent = getUserCode(currentUserEmail);
-      if(userArea) userArea.classList.add("visible");
-      $("#entryDate").valueAsDate = new Date();
-      populateCategories();
-      await loadEntries();
-    }else{
-      currentUserEmail = null;
-      $("#app").style.display="none";
-      $("#loginBox").style.display="block";
-      $("#userEmail").textContent = "";
-      showLoginError("");
-      if(userArea) userArea.classList.remove("visible");
+  const ensureFirebaseReady = ()=>{
+    if(firebaseInitFailed) return false;
+    if(auth) return true;
+    try{
+      bootFirebase();
+      return !!auth;
+    }catch(err){
+      firebaseInitFailed = true;
+      console.error("Firebase boot retry failed", err);
+      return false;
     }
-    setLoginLoading(false);
-  });
+  };
+
+  const setConfigFormValues = ()=>{
+    if(!firebaseConfigForm) return;
+    const current = loadFirebaseConfig();
+    Object.entries(configInputs).forEach(([key, input])=>{
+      if(!input) return;
+      input.value = current?.[key] ?? "";
+    });
+  };
+
+  const openFirebaseConfigModal = ()=>{
+    if(firebaseConfigModal){
+      setConfigFormValues();
+      firebaseConfigModal.classList.add("active");
+      firebaseConfigModal.setAttribute("aria-hidden","false");
+    }
+  };
+
+  const hideFirebaseConfigModal = ()=>{
+    if(firebaseConfigModal){
+      firebaseConfigModal.classList.remove("active");
+      firebaseConfigModal.setAttribute("aria-hidden","true");
+    }
+  };
+
+  /******** مصادقة ********/
+  const startAuthListener = ()=>{
+    if(!ensureFirebaseReady()){ return; }
+    if(typeof authUnsubscribe === "function"){
+      authUnsubscribe();
+    }
+    authUnsubscribe = onAuthStateChanged(auth, async (user)=>{
+      if(user){
+        currentUserEmail = user.email;
+        $("#loginBox").style.display="none";
+        $("#app").style.display="block";
+        showLoginError("");
+        $("#userEmail").textContent = getUserCode(currentUserEmail);
+        if(userArea) userArea.classList.add("visible");
+        $("#entryDate").valueAsDate = new Date();
+        populateCategories();
+        await loadEntries();
+      }else{
+        currentUserEmail = null;
+        $("#app").style.display="none";
+        $("#loginBox").style.display="block";
+        $("#userEmail").textContent = "";
+        showLoginError("");
+        if(userArea) userArea.classList.remove("visible");
+      }
+      setLoginLoading(false);
+    });
+  };
+  startAuthListener();
+
+  if(firebaseInitFailed){
+    showLoginError("تعذّر تهيئة Firebase بالمفاتيح الحالية. حدّث الإعدادات وجرب مجددًا.");
+    openFirebaseConfigModal();
+  }
 
   window.login = async ()=>{
     if(loginButton?.disabled) return;
@@ -756,6 +867,10 @@ const firebaseConfig = {
     const password = $("#password").value.trim();
     if(!email || !password){
       showLoginError("أدخل البريد وكلمة المرور لإتمام تسجيل الدخول.");
+      return;
+    }
+    if(!ensureFirebaseReady()){
+      showLoginError("لم يتم تهيئة Firebase. حدّث مفاتيح الاتصال ثم حاول مجددًا.");
       return;
     }
     try{
@@ -771,6 +886,52 @@ const firebaseConfig = {
 
   if(loginForm){
     loginForm.addEventListener("submit",(e)=>{ e.preventDefault(); login(); });
+  }
+
+  if(firebaseConfigButton){
+    firebaseConfigButton.addEventListener("click", openFirebaseConfigModal);
+  }
+
+  if(closeFirebaseConfigModal){
+    closeFirebaseConfigModal.addEventListener("click", hideFirebaseConfigModal);
+  }
+
+  if(firebaseConfigModal){
+    firebaseConfigModal.addEventListener("click",(e)=>{
+      if(e.target === firebaseConfigModal){
+        hideFirebaseConfigModal();
+      }
+    });
+  }
+
+  if(firebaseConfigForm){
+    setConfigFormValues();
+    firebaseConfigForm.addEventListener("submit",(e)=>{
+      e.preventDefault();
+      const formData = new FormData(firebaseConfigForm);
+      const newConfig = {};
+      Object.keys(configInputs).forEach((key)=>{
+        const value = (formData.get(key)||"").toString().trim();
+        if(value) newConfig[key] = value;
+      });
+      const requiredFields = ["apiKey","authDomain","projectId"];
+      const missing = requiredFields.filter(f=>!newConfig[f]);
+      if(missing.length){
+        showLoginError(`يرجى تعبئة الحقول المطلوبة: ${missing.join(", ")}`);
+        return;
+      }
+      try{
+        saveFirebaseConfig(newConfig);
+        bootFirebase();
+        startAuthListener();
+        showLoginError("تم حفظ إعدادات Firebase. حاول تسجيل الدخول مجددًا.");
+        hideFirebaseConfigModal();
+      }catch(err){
+        firebaseInitFailed = true;
+        console.error("Failed to apply Firebase config", err);
+        showLoginError("تعذّر تطبيق الإعدادات الجديدة. تأكد من صحة المفاتيح والمحاولة مرة أخرى.");
+      }
+    });
   }
 
   window.logout = ()=> signOut(auth);
@@ -1140,7 +1301,54 @@ const firebaseConfig = {
     <button class="btn-okay" type="button" onclick="resetPassword()" title="إرسال رابط تغيير كلمة المرور">استعادة كلمة المرور</button>
   </form>
   <p id="loginError" class="error-text" aria-live="polite"></p>
+  <button id="firebaseConfigButton" type="button" class="config-link" aria-haspopup="dialog">
+    <span>إعدادات الاتصال</span>
+    <small>تحديث مفاتيح Firebase</small>
+  </button>
   <p class="muted">التسجيل مُغلق — فقط حسابات تتم إضافتها من Firebase Console تستطيع الدخول.</p>
+</div>
+
+<div id="firebaseConfigModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="modal-panel" role="document" tabindex="-1">
+    <button type="button" class="modal-close" id="closeFirebaseConfigModal" aria-label="إغلاق">&times;</button>
+    <h2 class="modal-title">إعدادات اتصال Firebase</h2>
+    <p class="modal-subtitle">حدّث المفاتيح في حال ظهور خطأ "API key not valid" أو عند نقل التطبيق إلى نطاق جديد.</p>
+    <form id="firebaseConfigForm" class="config-form">
+      <label>
+        مفتاح API
+        <input id="configApiKey" name="apiKey" type="text" autocomplete="off" required />
+      </label>
+      <label>
+        نطاق المصادقة (authDomain)
+        <input id="configAuthDomain" name="authDomain" type="text" autocomplete="off" required />
+      </label>
+      <label>
+        رقم المشروع (projectId)
+        <input id="configProjectId" name="projectId" type="text" autocomplete="off" required />
+      </label>
+      <label>
+        Storage Bucket (اختياري)
+        <input id="configStorageBucket" name="storageBucket" type="text" autocomplete="off" />
+      </label>
+      <label>
+        Messaging Sender ID (اختياري)
+        <input id="configMessagingSenderId" name="messagingSenderId" type="text" autocomplete="off" />
+      </label>
+      <label>
+        App ID (اختياري)
+        <input id="configAppId" name="appId" type="text" autocomplete="off" />
+      </label>
+      <label>
+        Measurement ID (اختياري)
+        <input id="configMeasurementId" name="measurementId" type="text" autocomplete="off" />
+      </label>
+      <div class="actions">
+        <button type="submit" class="btn-okay">حفظ وتطبيق</button>
+        <button type="button" class="btn-danger" onclick="localStorage.removeItem('emadFirebaseConfig'); location.reload();">إعادة الضبط</button>
+      </div>
+    </form>
+    <p class="muted" style="margin-top:6px">يتم حفظ الإعدادات في هذا المتصفح فقط. تأكد من نقل المفاتيح الصحيحة من Firebase Console &raquo; Project settings &raquo; General &raquo; Config.</p>
+  </div>
 </div>
 
 <!-- التطبيق -->
