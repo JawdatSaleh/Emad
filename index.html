@@ -359,6 +359,10 @@ const firebaseConfig = {
   const categoryModalFooter = $("#categoryModalFooter");
   const shareCategoryModalBtn = $("#shareCategoryModal");
   const loginError = $("#loginError");
+  const loginButton = $("#loginButton");
+  const loginForm = $("#loginForm");
+  const emailInput = $("#email");
+  const passwordInput = $("#password");
 
   if(shareCategoryModalBtn){
     shareCategoryModalBtn.dataset.originalText = shareCategoryModalBtn.textContent.trim();
@@ -369,6 +373,15 @@ const firebaseConfig = {
     if(!loginError) return;
     loginError.textContent = message;
     loginError.style.display = message?"block":"none";
+  };
+
+  const setLoginLoading = (isLoading)=>{
+    if(loginButton){
+      loginButton.disabled = !!isLoading;
+      loginButton.textContent = isLoading?"جاري الدخول...":"دخول";
+    }
+    if(emailInput) emailInput.disabled = !!isLoading;
+    if(passwordInput) passwordInput.disabled = !!isLoading;
   };
 
   function translateType(t){ return t==="expense"?"مصروف":t==="income"?"إيراد":t==="transfer"?"تحويل":t; }
@@ -716,6 +729,7 @@ const firebaseConfig = {
   });
 
   window.login = async ()=>{
+    if(loginButton?.disabled) return;
     const email = $("#email").value.trim();
     const password = $("#password").value.trim();
     if(!email || !password){
@@ -723,19 +737,30 @@ const firebaseConfig = {
       return;
     }
     try{
+      setLoginLoading(true);
       await signInWithEmailAndPassword(auth, email, password);
       showLoginError("");
     }catch(err){
       let message = "تعذّر تسجيل الدخول. تحقق من البيانات وحاول مجددًا.";
       switch(err?.code){
         case "auth/missing-password": message = "يرجى إدخال كلمة المرور لهذا الحساب."; break;
+        case "auth/invalid-email": message = "صيغة البريد الإلكتروني غير صحيحة."; break;
         case "auth/invalid-credential":
         case "auth/wrong-password": message = "كلمة المرور غير صحيحة."; break;
         case "auth/user-not-found": message = "لا يوجد حساب مسجل بهذا البريد."; break;
+        case "auth/too-many-requests": message = "تم إيقاف المحاولات مؤقتًا بسبب عدة محاولات فاشلة. حاول لاحقًا."; break;
+        case "auth/network-request-failed": message = "تعذّر الاتصال بالإنترنت. تأكد من الشبكة ثم حاول مجددًا."; break;
+        case "auth/user-disabled": message = "تم تعطيل هذا الحساب من قبل المسؤول."; break;
+        case "auth/unauthorized-domain": message = "هذا النطاق غير مسموح به في إعدادات Firebase. افتح الصفحة من نطاق مصرح أو أضفه من لوحة التحكم."; break;
       }
       showLoginError(message);
     }
+    finally{ setLoginLoading(false); }
   };
+
+  if(loginForm){
+    loginForm.addEventListener("submit",(e)=>{ e.preventDefault(); login(); });
+  }
 
   window.logout = ()=> signOut(auth);
 
@@ -1097,12 +1122,12 @@ const firebaseConfig = {
 <!-- شاشة دخول آمنة -->
 <div id="loginBox" class="container login">
   <h3>تسجيل الدخول</h3>
-  <div class="row" style="justify-content:center">
-    <input id="email" type="email" placeholder="البريد الإلكتروني" />
-    <input id="password" type="password" placeholder="كلمة المرور" />
-    <button onclick="login()">دخول</button>
-    <button class="btn-okay" onclick="resetPassword()" title="إرسال رابط تغيير كلمة المرور">استعادة كلمة المرور</button>
-  </div>
+  <form id="loginForm" class="row" style="justify-content:center" novalidate>
+    <input id="email" type="email" placeholder="البريد الإلكتروني" autocomplete="username" required />
+    <input id="password" type="password" placeholder="كلمة المرور" autocomplete="current-password" required />
+    <button id="loginButton" type="submit">دخول</button>
+    <button class="btn-okay" type="button" onclick="resetPassword()" title="إرسال رابط تغيير كلمة المرور">استعادة كلمة المرور</button>
+  </form>
   <p id="loginError" class="error-text" aria-live="polite"></p>
   <p class="muted">التسجيل مُغلق — فقط حسابات تتم إضافتها من Firebase Console تستطيع الدخول.</p>
 </div>
