@@ -375,6 +375,27 @@ const firebaseConfig = {
     loginError.style.display = message?"block":"none";
   };
 
+  const describeAuthError = (err)=>{
+    if(!err) return "تعذّر تسجيل الدخول. تحقق من البيانات وحاول مجددًا.";
+    const code = err?.code || "";
+    switch(code){
+      case "auth/missing-password": return "يرجى إدخال كلمة المرور لهذا الحساب.";
+      case "auth/invalid-email": return "صيغة البريد الإلكتروني غير صحيحة.";
+      case "auth/invalid-credential":
+      case "auth/wrong-password": return "كلمة المرور غير صحيحة.";
+      case "auth/user-not-found": return "لا يوجد حساب مسجل بهذا البريد.";
+      case "auth/too-many-requests": return "تم إيقاف المحاولات مؤقتًا بسبب عدة محاولات فاشلة. حاول لاحقًا.";
+      case "auth/network-request-failed": return "تعذّر الاتصال بالإنترنت. تأكد من الشبكة ثم حاول مجددًا.";
+      case "auth/user-disabled": return "تم تعطيل هذا الحساب من قبل المسؤول.";
+      case "auth/operation-not-allowed": return "مزود البريد/كلمة المرور غير مفعل في إعدادات Firebase.";
+      case "auth/unauthorized-domain":
+      case "auth/configuration-not-found": return "هذا النطاق غير مصرح به في إعدادات Firebase. افتح التطبيق من نطاق مسموح أو أضفه من لوحة التحكم.";
+      case "auth/invalid-api-key": return "مفتاح Firebase API غير صالح أو مقيّد. حدّث الإعدادات من Firebase Console.";
+      default:
+        return `تعذّر تسجيل الدخول. (${code||"unknown"})`;
+    }
+  };
+
   const setLoginLoading = (isLoading)=>{
     if(loginButton){
       loginButton.disabled = !!isLoading;
@@ -726,6 +747,7 @@ const firebaseConfig = {
       showLoginError("");
       if(userArea) userArea.classList.remove("visible");
     }
+    setLoginLoading(false);
   });
 
   window.login = async ()=>{
@@ -741,18 +763,7 @@ const firebaseConfig = {
       await signInWithEmailAndPassword(auth, email, password);
       showLoginError("");
     }catch(err){
-      let message = "تعذّر تسجيل الدخول. تحقق من البيانات وحاول مجددًا.";
-      switch(err?.code){
-        case "auth/missing-password": message = "يرجى إدخال كلمة المرور لهذا الحساب."; break;
-        case "auth/invalid-email": message = "صيغة البريد الإلكتروني غير صحيحة."; break;
-        case "auth/invalid-credential":
-        case "auth/wrong-password": message = "كلمة المرور غير صحيحة."; break;
-        case "auth/user-not-found": message = "لا يوجد حساب مسجل بهذا البريد."; break;
-        case "auth/too-many-requests": message = "تم إيقاف المحاولات مؤقتًا بسبب عدة محاولات فاشلة. حاول لاحقًا."; break;
-        case "auth/network-request-failed": message = "تعذّر الاتصال بالإنترنت. تأكد من الشبكة ثم حاول مجددًا."; break;
-        case "auth/user-disabled": message = "تم تعطيل هذا الحساب من قبل المسؤول."; break;
-        case "auth/unauthorized-domain": message = "هذا النطاق غير مسموح به في إعدادات Firebase. افتح الصفحة من نطاق مصرح أو أضفه من لوحة التحكم."; break;
-      }
+      const message = describeAuthError(err);
       showLoginError(message);
     }
     finally{ setLoginLoading(false); }
