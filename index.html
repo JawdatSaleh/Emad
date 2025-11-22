@@ -380,14 +380,6 @@ const DEFAULT_FIREBASE_CONFIG = {
     }
   };
   let expectedTotals = cloneData(defaultExpected);
-  let revenueTarget = 983625;
-  const revenueStages = [
-    { name: "دفعة أولى", percent: 20, due: "مرحلة 1" },
-    { name: "دفعة ثانية", percent: 30, due: "مرحلة 2" },
-    { name: "دفعة ثالثة", percent: 50, due: "مرحلة 3" },
-  ];
-
-  let currentRevenueTotal = 0;
   let activeCategoryTrigger = null;
   let activeCategoryName = null;
 
@@ -398,20 +390,10 @@ const DEFAULT_FIREBASE_CONFIG = {
   const tableFooterRow = $("#entriesFooter");
   const searchInput = $("#searchBox");
   const filterCategory = $("#filterCategory");
-  const filterType = $("#filterType");
-  const filterLocation = $("#filterLocation");
   const filterFrom = $("#filterFrom");
   const filterTo = $("#filterTo");
   const clearFiltersBtn = $("#clearFilters");
   const userArea = $("#userArea");
-  const revenueCard = $("#revenueCard");
-  const revenueModal = $("#revenueModal");
-  const closeRevenueModalBtn = $("#closeRevenueModal");
-  const revenueStagesList = $("#revenueStagesList");
-  const revenueModalTargetValue = $("#revenueModalTargetValue");
-  const revenueModalCollectedValue = $("#revenueModalCollectedValue");
-  const revenueModalRemainingValue = $("#revenueModalRemainingValue");
-  const revenueModalProgressValue = $("#revenueModalProgressValue");
   const categoryModal = $("#categoryModal");
   const closeCategoryModalBtn = $("#closeCategoryModal");
   const categoryModalTitle = $("#categoryModalTitle");
@@ -479,8 +461,7 @@ const DEFAULT_FIREBASE_CONFIG = {
     if(passwordInput) passwordInput.disabled = !!isLoading;
   };
 
-  function translateType(t){ return t==="expense"?"مصروف":t==="income"?"إيراد":t==="transfer"?"تحويل":t; }
-  function translateLocation(l){ return l==="cash"?"الصندوق":l==="bank"?"البنك":l; }
+  function translateType(){ return "مصروف"; }
   const userCodes = {
     "jawdat.saleh99@gmail.com": "A2",
     "emad.lk9@gmail.com": "A1"
@@ -495,12 +476,6 @@ const DEFAULT_FIREBASE_CONFIG = {
   const formatNumber = value => numberFormatter.format(roundNumber(value));
   const currencySymbol = '<span class="currency-symbol">﷼</span>';
   const formatCurrency = value => `${formatNumber(value)} ${currencySymbol}`;
-  const stageStatusTexts = {
-    completed: "مكتملة",
-    "in-progress": "قيد التحصيل",
-    pending: "لم تبدأ بعد"
-  };
-
   function renderCategoryModal(category){
     const targetCategory = category ?? activeCategoryName;
     if(!targetCategory) return;
@@ -515,8 +490,6 @@ const DEFAULT_FIREBASE_CONFIG = {
 
     const categoryEntries = entries.filter(e=> e.category === targetCategory);
     let totalExpenses = 0;
-    let totalIncome = 0;
-    let totalTransfers = 0;
 
     if(shareCategoryModalBtn){
       const hasEntries = categoryEntries.length > 0;
@@ -532,26 +505,19 @@ const DEFAULT_FIREBASE_CONFIG = {
     }else{
       categoryEntries.forEach(entry=>{
         const amount = Number(entry.amount||0);
-        if(entry.type === "expense") totalExpenses += amount;
-        else if(entry.type === "income") totalIncome += amount;
-        else if(entry.type === "transfer") totalTransfers += amount;
+        totalExpenses += amount;
 
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td>${entry.id?.slice?.(0,6) || entry.id || ""}</td>
           <td>${entry.date || ""}</td>
-          <td>${translateType(entry.type)}</td>
           <td>${formatNumber(entry.amount || 0)}</td>
-          <td>${translateLocation(entry.location)}</td>
           <td>${getUserCode(entry.user)}</td>
           <td>${entry.notes || ""}</td>
         `;
         categoryModalBody.appendChild(tr);
       });
     }
-
-    const netFlow = totalIncome - totalExpenses;
-    const netClass = netFlow > 0 ? "positive" : netFlow < 0 ? "negative" : "";
     categoryModalFooter.innerHTML = `
       <td colspan="2" class="footer-label">
         <span>عدد السجلات</span>
@@ -561,18 +527,7 @@ const DEFAULT_FIREBASE_CONFIG = {
         <span>إجمالي المصروفات</span>
         <strong>${formatCurrency(totalExpenses)}</strong>
       </td>
-      <td class="footer-amount income">
-        <span>إجمالي الإيرادات</span>
-        <strong>${formatCurrency(totalIncome)}</strong>
-      </td>
-      <td class="footer-amount transfer">
-        <span>التحويلات</span>
-        <strong>${formatCurrency(totalTransfers)}</strong>
-      </td>
-      <td colspan="2" class="footer-balance">
-        <span>صافي الفئة</span>
-        <strong class="${netClass}">${formatCurrency(netFlow)}</strong>
-      </td>
+      <td colspan="2"></td>
     `;
   }
 
@@ -647,40 +602,6 @@ const DEFAULT_FIREBASE_CONFIG = {
     return typeof window.html2canvas === "function" ? window.html2canvas : null;
   }
 
-
-  function openRevenueModal(){
-    if(!revenueModal) return;
-    updateRevenueBreakdown(currentRevenueTotal);
-    revenueModal.classList.add("active");
-    revenueModal.setAttribute("aria-hidden","false");
-    document.body.style.overflow = "hidden";
-    const panel = revenueModal.querySelector(".modal-panel");
-    panel?.focus();
-  }
-
-  function closeRevenueModal(){
-    if(!revenueModal) return;
-    revenueModal.classList.remove("active");
-    revenueModal.setAttribute("aria-hidden","true");
-    document.body.style.overflow = "";
-    revenueCard?.focus();
-  }
-
-  if(revenueCard){
-    revenueCard.addEventListener("click", openRevenueModal);
-    revenueCard.addEventListener("keydown", evt=>{
-      if(evt.key === "Enter" || evt.key === " "){
-        evt.preventDefault();
-        openRevenueModal();
-      }
-    });
-  }
-  closeRevenueModalBtn?.addEventListener("click", closeRevenueModal);
-  revenueModal?.addEventListener("click", evt=>{
-    if(evt.target === revenueModal){
-      closeRevenueModal();
-    }
-  });
   closeCategoryModalBtn?.addEventListener("click", closeCategoryModal);
   
   async function shareCategoryRecordsAsImage(){
@@ -730,76 +651,11 @@ const DEFAULT_FIREBASE_CONFIG = {
   });
   document.addEventListener("keydown", evt=>{
     if(evt.key === "Escape"){
-      if(revenueModal?.classList.contains("active")){
-        closeRevenueModal();
-        return;
-      }
       if(categoryModal?.classList.contains("active")){
         closeCategoryModal();
       }
     }
   });
-
-  
-  function updateRevenueBreakdown(collected){
-    const target = Number(revenueTarget)||0;
-    const collectedVal = Number(collected)||0;
-    const remaining = Math.max(target - collectedVal, 0);
-    const progress = target > 0 ? Math.min((collectedVal/target)*100, 100) : 0;
-
-    if(revenueModalTargetValue) revenueModalTargetValue.innerHTML = formatCurrency(target);
-    if(revenueModalCollectedValue) revenueModalCollectedValue.innerHTML = formatCurrency(collectedVal);
-    if(revenueModalRemainingValue) revenueModalRemainingValue.innerHTML = formatCurrency(remaining);
-    if(revenueModalProgressValue) revenueModalProgressValue.textContent = `${Math.round(progress)}%`;
-
-    if(!revenueStagesList) return;
-    revenueStagesList.innerHTML = "";
-    let runningTarget = 0;
-    revenueStages.forEach((stage, i)=>{
-      const stageTarget = target * (stage.percent/100);
-      const stageCollected = Math.min(Math.max(collectedVal - runningTarget, 0), stageTarget);
-      runningTarget += stageTarget;
-      const rawPerc = stageTarget>0 ? (stageCollected/stageTarget)*100 : 0;
-      const perc = Math.min(Math.max(rawPerc,0),100);
-      const status = perc>=100 ? "completed" : perc>0 ? "in-progress" : "pending";
-
-      const card = document.createElement("div");
-      card.className = `stage-card stage-${status}`;
-      card.innerHTML = `
-        <div class="stage-header">
-          <div class="stage-info">
-            <h3 class="stage-title">
-              <span>${stage.name}</span>
-              <span class="stage-percent">${stage.percent}%</span>
-            </h3>
-            <p class="stage-description">${stage.due||""}</p>
-          </div>
-          <div class="stage-meta">
-            <div class="stage-status">${stageStatusTexts[status]||""}</div>
-            <div class="stage-amounts">
-              <div>المحصل: <strong>${formatCurrency(stageCollected)}</strong></div>
-              <div class="stage-remaining">المتبقي: ${formatCurrency(Math.max(stageTarget-stageCollected,0))}</div>
-            </div>
-          </div>
-        </div>
-        <div class="progress-shell stage-progress" data-progress="${perc}" data-alert="${rawPerc>=100}">
-          <div class="progress-bar"></div>
-          <span class="progress-label">${Math.round(rawPerc)}%</span>
-        </div>
-      `;
-      revenueStagesList.appendChild(card);
-
-      const shell = card.querySelector(".progress-shell");
-      const bar = shell.querySelector(".progress-bar");
-      bar.style.width="0%";
-      requestAnimationFrame(()=>requestAnimationFrame(()=>{
-        bar.style.width = `${shell.dataset.progress}%`;
-      }));
-    });
-  }
-
-  updateRevenueBreakdown(0);
-
   const ensureFirebaseReady = ()=>{
     if(firebaseInitFailed) return false;
     if(auth) return true;
@@ -988,54 +844,16 @@ const DEFAULT_FIREBASE_CONFIG = {
 
   /******** بطاقات / توقعات ********/
   function updateTotals(){
-    let totalExpenses=0,totalIncome=0,cash=0,bank=0;
+    let totalExpenses=0;
     const catTotals = Object.fromEntries(categories.map(c=>[c,0]));
 
     entries.forEach(e=>{
       const amount = Number(e.amount||0);
-      if(e.type==="expense"){
-        totalExpenses += amount;
-        if(e.location==="cash") cash -= amount; else bank -= amount;
-        if(catTotals[e.category]!=null) catTotals[e.category]+=amount;
-      }else if(e.type==="income"){
-        totalIncome += amount;
-        if(e.location==="cash") cash += amount; else bank += amount;
-      }else if(e.type==="transfer"){
-        if(e.location==="cash"){ cash -= amount; bank += amount; }
-        else { bank -= amount; cash += amount; }
-      }
+      totalExpenses += amount;
+      if(catTotals[e.category]!=null) catTotals[e.category]+=amount;
     });
 
     $("#totalExpenses").innerHTML = formatCurrency(totalExpenses);
-    const totalIncomeAmountEl = $("#totalIncomeAmount");
-    const totalIncomeShell = $("#totalIncomeProgressShell");
-    const totalIncomeLabel = $("#totalIncomeProgressLabel");
-
-    if(totalIncomeAmountEl){
-      totalIncomeAmountEl.innerHTML = formatCurrency(totalIncome);
-    }
-    if(totalIncomeShell){
-      const rawPerc = revenueTarget > 0 ? (totalIncome / revenueTarget) * 100 : 0;
-      const clampedPerc = revenueTarget > 0 ? Math.min(Math.max(rawPerc, 0), 100) : 0;
-      totalIncomeShell.dataset.progress = clampedPerc;
-      totalIncomeShell.dataset.alert = rawPerc >= 100;
-      const bar = totalIncomeShell.querySelector(".progress-bar");
-      if(bar){
-        bar.style.width = "0%";
-        requestAnimationFrame(()=>{
-          requestAnimationFrame(()=>{
-            bar.style.width = `${totalIncomeShell.dataset.progress}%`;
-          });
-        });
-      }
-      if(totalIncomeLabel){
-        totalIncomeLabel.textContent = revenueTarget > 0 ? `${Math.round(rawPerc)}%` : "—";
-      }
-    }
-    currentRevenueTotal = totalIncome;
-    updateRevenueBreakdown(totalIncome);
-    $("#cashBalance").innerHTML  = formatCurrency(cash);
-    $("#bankBalance").innerHTML  = formatCurrency(bank);
 
     const row = $("#categoryProgress");
     if(row){
@@ -1100,10 +918,8 @@ const DEFAULT_FIREBASE_CONFIG = {
       tr.innerHTML = `
         <td>${e.id?.slice?.(0,6)||e.id||""}</td>
         <td>${e.date||""}</td>
-        <td>${translateType(e.type)}</td>
         <td>${formatNumber(e.amount||0)}</td>
         <td>${e.category||""}</td>
-        <td>${translateLocation(e.location)}</td>
         <td>${getUserCode(e.user)}</td>
         <td>${e.notes||""}</td>
         <td><button class="records-delete-btn" type="button" onclick="deleteEntry('${e.id}')" title="حذف السجل" aria-label="حذف السجل">&times;</button></td>`;
@@ -1111,18 +927,12 @@ const DEFAULT_FIREBASE_CONFIG = {
     });
     if(tableFooterRow){
       let footerExpenses = 0;
-      let footerIncome = 0;
-      let footerTransfers = 0;
       filteredEntries.forEach(e=>{
         const amount = Number(e.amount||0);
-        if(e.type === "expense") footerExpenses += amount;
-        else if(e.type === "income") footerIncome += amount;
-        else if(e.type === "transfer") footerTransfers += amount;
+        footerExpenses += amount;
       });
-      const netFlow = footerIncome - footerExpenses;
-      const netFlowClass = netFlow > 0 ? "positive" : netFlow < 0 ? "negative" : "";
       tableFooterRow.innerHTML = `
-        <td colspan="3" class="footer-label">
+        <td colspan="2" class="footer-label">
           <span>إجمالي السجلات المعروضة</span>
           <strong>${formatNumber(filteredEntries.length)}</strong>
         </td>
@@ -1130,18 +940,7 @@ const DEFAULT_FIREBASE_CONFIG = {
           <span>المصروفات</span>
           <strong>${formatCurrency(footerExpenses)}</strong>
         </td>
-        <td class="footer-amount income">
-          <span>الإيرادات</span>
-          <strong>${formatCurrency(footerIncome)}</strong>
-        </td>
-        <td class="footer-amount transfer">
-          <span>التحويلات</span>
-          <strong>${formatCurrency(footerTransfers)}</strong>
-        </td>
-        <td colspan="3" class="footer-balance">
-          <span>صافي التدفق</span>
-          <strong class="${netFlowClass}">${formatCurrency(netFlow)}</strong>
-        </td>
+        <td colspan="4"></td>
       `;
     }
     updateTotals();
@@ -1170,15 +969,13 @@ const DEFAULT_FIREBASE_CONFIG = {
   window.submitEntry = async ()=>{
     if(!currentUserEmail){ alert("يرجى تسجيل الدخول أولًا"); return; }
     const date = $("#entryDate").value;
-    const type = $("#entryType").value;
     const amount = parseFloat($("#entryAmount").value);
     const category = $("#entryCategory").value;
-    const location = $("#entryLocation").value;
     const notes = $("#entryNotes").value;
-    if(!date || Number.isNaN(amount) || !category || !location){
+    if(!date || Number.isNaN(amount) || !category){
       alert("الرجاء إدخال جميع الحقول المطلوبة"); return;
     }
-    const entry = { date, type, amount, category, location, user: currentUserEmail, notes };
+    const entry = { date, type: "expense", amount, category, user: currentUserEmail, notes };
     await saveEntry(entry);
     $("#entryAmount").value=""; $("#entryNotes").value="";
     await loadEntries();
@@ -1189,18 +986,14 @@ const DEFAULT_FIREBASE_CONFIG = {
   function applyFilters(){
     const q = (searchInput?.value || "").trim().toLowerCase();
     const categoryValue = filterCategory?.value || "";
-    const typeValue = filterType?.value || "";
-    const locationValue = filterLocation?.value || "";
     const fromValue = filterFrom?.value || "";
     const toValue = filterTo?.value || "";
 
     filteredEntries = entries.filter(e=>{
-      const matchesSearch = !q || [e.id, e.date, e.type, e.amount, e.category, e.location, e.user, e.notes]
+      const matchesSearch = !q || [e.id, e.date, e.amount, e.category, e.user, e.notes]
         .map(x=> (x??"").toString().toLowerCase()).some(v=> v.includes(q));
       if(!matchesSearch) return false;
       if(categoryValue && e.category !== categoryValue) return false;
-      if(typeValue && e.type !== typeValue) return false;
-      if(locationValue && e.location !== locationValue) return false;
       if(fromValue && (!e.date || e.date < fromValue)) return false;
       if(toValue && (!e.date || e.date > toValue)) return false;
       return true;
@@ -1210,13 +1003,11 @@ const DEFAULT_FIREBASE_CONFIG = {
   }
 
   searchInput?.addEventListener("input", ()=> applyFilters());
-  [filterCategory, filterType, filterLocation].forEach(el=> el?.addEventListener("change", applyFilters));
+  [filterCategory].forEach(el=> el?.addEventListener("change", applyFilters));
   [filterFrom, filterTo].forEach(el=> el?.addEventListener("change", applyFilters));
   clearFiltersBtn?.addEventListener("click", ()=>{
     if(searchInput) searchInput.value = "";
     if(filterCategory) filterCategory.value = "";
-    if(filterType) filterType.value = "";
-    if(filterLocation) filterLocation.value = "";
     if(filterFrom) filterFrom.value = "";
     if(filterTo) filterTo.value = "";
     applyFilters();
@@ -1226,30 +1017,30 @@ const DEFAULT_FIREBASE_CONFIG = {
   window.exportPDF = ()=>{
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({orientation:"l", unit:"pt"});
-    doc.text("حسابات - السجلات", 40, 30);
+    doc.text("المصاريف الشخصية", 40, 30);
     const rows = filteredEntries.map(e=>[
-      e.id, e.date, translateType(e.type), formatNumber(e.amount||0),
-      e.category, translateLocation(e.location), getUserCode(e.user), e.notes||""
+      e.id, e.date, formatNumber(e.amount||0),
+      e.category, getUserCode(e.user), e.notes||""
     ]);
     doc.autoTable({
-      head:[["#","التاريخ","النوع","المبلغ","الفئة","الموقع","المستخدم","ملاحظات"]],
+      head:[["#","التاريخ","المبلغ","الفئة","المستخدم","ملاحظات"]],
       body:rows, startY:50
     });
-    doc.save("omran-entries.pdf");
+    doc.save("personal-expenses.pdf");
   };
 
   window.exportXLSX = ()=>{
     const data = [
-      ["#","التاريخ","النوع","المبلغ","الفئة","الموقع","المستخدم","ملاحظات"],
+      ["#","التاريخ","المبلغ","الفئة","المستخدم","ملاحظات"],
       ...filteredEntries.map(e=>[
-        e.id, e.date, translateType(e.type), roundNumber(e.amount||0),
-        e.category, translateLocation(e.location), getUserCode(e.user), e.notes||""
+        e.id, e.date, roundNumber(e.amount||0),
+        e.category, getUserCode(e.user), e.notes||""
       ])
     ];
     const ws = XLSX.utils.aoa_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "السجلات");
-    XLSX.writeFile(wb, "omran-entries.xlsx");
+    XLSX.writeFile(wb, "personal-expenses.xlsx");
   };
 </script>
 </head>
@@ -1257,7 +1048,7 @@ const DEFAULT_FIREBASE_CONFIG = {
 
 <header>
   <div class="header-content">
-    <h1>حسابات</h1>
+    <h1>مصاريفي الشخصية</h1>
     <div id="userArea" class="user-area">
       <span id="userEmail" class="user-email"></span>
       <button class="btn-danger logout-button" onclick="logout()">تسجيل الخروج</button>
@@ -1329,46 +1120,7 @@ const DEFAULT_FIREBASE_CONFIG = {
 <div id="app" class="container" style="display:none;">
   <!-- بطاقات إجماليات -->
   <div class="grid">
-    <div class="card summary-card cash-card"><small>رصيد الصندوق</small><b id="cashBalance">0 <span class="currency-symbol">﷼</span></b></div>
-    <div class="card summary-card"><small>رصيد البنك</small><b id="bankBalance">0 <span class="currency-symbol">﷼</span></b></div>
     <div class="card summary-card"><small>إجمالي المصروفات</small><b id="totalExpenses">0 <span class="currency-symbol">﷼</span></b></div>
-    <div class="card category-card revenue-card" id="revenueCard" role="button" tabindex="0" aria-haspopup="dialog" aria-controls="revenueModal">
-      <div class="card-header">
-        <span class="card-title">إجمالي الإيرادات</span>
-      </div>
-      <div class="card-amount" id="totalIncomeAmount">0 <span class="currency-symbol">﷼</span></div>
-      <div class="progress-shell" id="totalIncomeProgressShell" data-progress="0" data-alert="false">
-        <div class="progress-bar"></div>
-        <span class="progress-label" id="totalIncomeProgressLabel">0%</span>
-      </div>
-    </div>
-  </div>
-
-  <div id="revenueModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-hidden="true">
-    <div class="modal-panel" role="document" tabindex="-1">
-      <button type="button" class="modal-close" id="closeRevenueModal" aria-label="إغلاق">&times;</button>
-      <h2 class="modal-title">تفاصيل دفعات الإيرادات</h2>
-      <p class="modal-subtitle">متابعة دفعات العقد وإظهار نسب الإنجاز لكل مرحلة.</p>
-      <div class="modal-summary">
-        <div class="summary-item">
-          <span class="summary-label">قيمة العقد</span>
-          <span class="summary-value" id="revenueModalTargetValue">0 <span class="currency-symbol">﷼</span></span>
-        </div>
-        <div class="summary-item">
-          <span class="summary-label">المحصل حتى الآن</span>
-          <span class="summary-value" id="revenueModalCollectedValue">0 <span class="currency-symbol">﷼</span></span>
-        </div>
-        <div class="summary-item">
-          <span class="summary-label">المتبقي</span>
-          <span class="summary-value" id="revenueModalRemainingValue">0 <span class="currency-symbol">﷼</span></span>
-        </div>
-        <div class="summary-item">
-          <span class="summary-label">نسبة الإنجاز</span>
-          <span class="summary-value" id="revenueModalProgressValue">0%</span>
-        </div>
-      </div>
-      <div class="stages-list" id="revenueStagesList"></div>
-    </div>
   </div>
 
   <div id="categoryModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="categoryModalTitle" aria-describedby="categoryModalSubtitle">
@@ -1383,9 +1135,7 @@ const DEFAULT_FIREBASE_CONFIG = {
             <tr>
               <th>#</th>
               <th>التاريخ</th>
-              <th>النوع</th>
               <th>المبلغ</th>
-              <th>الموقع</th>
               <th>المستخدم</th>
               <th>ملاحظات</th>
             </tr>
@@ -1411,24 +1161,11 @@ const DEFAULT_FIREBASE_CONFIG = {
       <div class="entry-field has-icon">
         <input type="date" id="entryDate">
       </div>
-      <div class="entry-field has-select">
-        <select id="entryType">
-          <option value="expense">مصروف</option>
-          <option value="income">إيراد</option>
-          <option value="transfer">تحويل</option>
-        </select>
-      </div>
       <div class="entry-field">
         <input type="number" id="entryAmount" step="0.01" placeholder="المبلغ (﷼)">
       </div>
       <div class="entry-field has-select">
         <select id="entryCategory"></select>
-      </div>
-      <div class="entry-field has-select">
-        <select id="entryLocation">
-          <option value="cash">الصندوق</option>
-          <option value="bank">البنك</option>
-        </select>
       </div>
       <div class="entry-field">
         <input type="text" id="entryNotes" placeholder="ملاحظات">
@@ -1456,23 +1193,6 @@ const DEFAULT_FIREBASE_CONFIG = {
           </select>
         </div>
         <div class="filter-field">
-          <label for="filterType">نوع العملية</label>
-          <select id="filterType">
-            <option value="">جميع الأنواع</option>
-            <option value="expense">مصروف</option>
-            <option value="income">إيراد</option>
-            <option value="transfer">تحويل</option>
-          </select>
-        </div>
-        <div class="filter-field">
-          <label for="filterLocation">الموقع</label>
-          <select id="filterLocation">
-            <option value="">كل المواقع</option>
-            <option value="cash">الصندوق</option>
-            <option value="bank">البنك</option>
-          </select>
-        </div>
-        <div class="filter-field">
           <label for="filterFrom">من تاريخ</label>
           <input type="date" id="filterFrom" />
         </div>
@@ -1487,8 +1207,8 @@ const DEFAULT_FIREBASE_CONFIG = {
     <table class="records-table">
       <thead>
         <tr>
-          <th>#</th><th>التاريخ</th><th>النوع</th><th>المبلغ</th><th>الفئة</th>
-          <th>الموقع</th><th>المستخدم</th><th>ملاحظات</th><th>إجراء</th>
+          <th>#</th><th>التاريخ</th><th>المبلغ</th><th>الفئة</th>
+          <th>المستخدم</th><th>ملاحظات</th><th>إجراء</th>
         </tr>
       </thead>
       <tbody id="entriesBody"></tbody>
