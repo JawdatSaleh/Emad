@@ -1,6 +1,11 @@
 
-<!-- ألوان وتصميم -->
-<style>
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <!-- ألوان وتصميم -->
+  <style>
   @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
 
   :root{
@@ -19,7 +24,7 @@
   *{box-sizing:border-box}
   body{font-family:"Cairo","Noto Sans Arabic",system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--surface-muted);margin:0;color:var(--text-main);line-height:1.5;text-align:right}
   header{background:linear-gradient(120deg,var(--brand),var(--brand-dark));color:#fff;padding:44px 22px 32px;border-bottom-left-radius:20px;border-bottom-right-radius:20px;box-shadow:var(--shadow-strong)}
-  header .header-content{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:18px}
+  header .header-content{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
   header h1{margin:0;font-size:24px;font-weight:700;letter-spacing:.6px}
   .user-area{display:none;align-items:center;gap:12px;font-size:14px;font-weight:600}
   .user-area.visible{display:flex}
@@ -29,7 +34,7 @@
 
   .container{max-width:1200px;margin:24px auto;background:var(--surface);padding:22px;border-radius:20px;box-shadow:var(--shadow-soft);border:1px solid rgba(37,99,235,.06)}
   .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
-  .card{background:var(--surface);color:var(--text-main);padding:14px;border-radius:16px;display:flex;flex-direction:column;gap:4px;box-shadow:0 10px 22px rgba(15,23,42,.05);min-height:110px;position:relative;overflow:hidden;transition:transform .2s ease,box-shadow .2s ease;border:1px solid #e2e8f0}
+  .card{background:var(--surface);color:var(--text-main);padding:14px;border-radius:16px;display:flex;flex-direction:column;gap:6px;box-shadow:0 10px 22px rgba(15,23,42,.05);min-height:110px;position:relative;overflow:hidden;transition:transform .2s ease,box-shadow .2s ease;border:1px solid #e2e8f0}
   .card small{font-size:12px;color:var(--text-muted);font-weight:600}
   .card b{font-size:20px;font-weight:700;color:var(--brand-dark)}
   .summary-card{min-height:28px;padding:10px 12px;gap:2px;background:#f8fafc;border:1px solid #e2e8f0;box-shadow:none}
@@ -104,12 +109,22 @@
   .stage-card.stage-completed .stage-remaining{color:var(--ok)}
   .stage-progress{height:10px;margin-top:0}
   .stage-progress .progress-label{font-size:11px}
+  .app-shell{padding-inline:clamp(10px,3vw,18px)}
   @media (max-width:640px){
     .modal-panel{padding:24px 20px}
     .modal-close{top:14px;inset-inline-end:14px}
     .modal-share{top:14px;inset-inline-start:14px}
     .stage-meta{align-items:flex-start;min-width:0}
     .stage-amounts{align-items:flex-start;text-align:right}
+    header{padding:32px 16px 24px;border-radius:0 0 18px 18px}
+    header .header-content{flex-direction:column;align-items:flex-start;gap:12px}
+    .user-area{width:100%;justify-content:space-between}
+    .container{margin:12px auto 20px;border-radius:16px;padding:18px 16px}
+    .grid{grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+    .card{padding:12px;border-radius:14px;min-height:100px}
+    .card .card-title{font-size:12px}
+    .card .card-amount{font-size:17px}
+    .summary-card small{font-size:11px}
   }
 
   .row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
@@ -205,14 +220,14 @@
   #categoryProgress{
     --cat-gap:clamp(4px,1.2vw,14px);
     display:flex;
-    flex-wrap:nowrap;
-    justify-content:space-between;
+    flex-wrap:wrap;
+    justify-content:flex-start;
     padding-bottom:6px;
     gap:var(--cat-gap);
   }
   #categoryProgress .card{
-    flex:1 1 calc((100% - (var(--cat-gap) * 5))/6);
-    min-width:0;
+    flex:1 1 calc((100% - (var(--cat-gap) * 2))/3);
+    min-width:180px;
     padding:clamp(6px,1.5vw,12px);
     border-radius:clamp(10px,2.4vw,16px);
   }
@@ -226,9 +241,16 @@
   #categoryProgress .progress-shell{margin-top:clamp(6px,1.4vw,10px);height:clamp(6px,.95vw,8px)}
   #categoryProgress .progress-label{font-size:clamp(8px,1.5vw,10px)}
   @media (max-width:600px){
-    #categoryProgress .card{padding:clamp(5px,1.8vw,8px)}
+    #categoryProgress{justify-content:center}
+    #categoryProgress .card{padding:clamp(6px,2.5vw,10px);min-width:160px;flex:1 1 calc(50% - var(--cat-gap));text-align:right}
     #categoryProgress .card .card-title{line-height:1.2}
     #categoryProgress .card .card-amount{font-weight:600}
+    header h1{font-size:22px}
+    .records-header{padding:12px}
+    .records-inline-filters{grid-template-columns:1fr;gap:10px}
+    .records-actions button{width:100%}
+    .records-actions{width:100%;justify-content:stretch}
+    input,select,button{font-size:15px}
   }
 
   .records-table{width:100%;border-collapse:collapse;margin-top:12px;background:var(--surface);overflow:hidden;border-radius:16px;min-width:780px}
