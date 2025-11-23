@@ -247,10 +247,12 @@
   #categoryProgress .progress-shell{margin-top:clamp(6px,1.4vw,10px);height:clamp(6px,.95vw,8px)}
   #categoryProgress .progress-label{font-size:clamp(8px,1.5vw,10px)}
   @media (max-width:600px){
-    #categoryProgress{justify-content:center;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
-    #categoryProgress .card{padding:clamp(6px,2.5vw,10px);min-width:0;text-align:right}
-    #categoryProgress .card .card-title{line-height:1.2}
-    #categoryProgress .card .card-amount{font-weight:600}
+    #categoryProgress{justify-content:center;grid-template-columns:repeat(3,minmax(0,1fr))}
+    #categoryProgress .card{padding:clamp(8px,2.8vw,12px);min-width:0;text-align:right}
+    #categoryProgress .card .card-title{line-height:1.25;font-size:14px}
+    #categoryProgress .card .card-amount{font-weight:700;font-size:19px}
+    #categoryProgress .card .card-subtitle{font-size:11px}
+    #categoryProgress .card .card-share{font-size:11px}
     header h1{font-size:22px}
     .records-header{padding:12px}
     .records-inline-filters{grid-template-columns:1fr;gap:10px}
