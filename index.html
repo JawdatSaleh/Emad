@@ -219,21 +219,27 @@
 
   #categoryProgress{
     --cat-gap:clamp(4px,1.2vw,14px);
-    display:flex;
-    flex-wrap:wrap;
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
     justify-content:flex-start;
     padding-bottom:6px;
     gap:var(--cat-gap);
   }
   #categoryProgress .card{
-    flex:1 1 calc((100% - (var(--cat-gap) * 2))/3);
-    min-width:180px;
-    padding:clamp(6px,1.5vw,12px);
+    width:100%;
+    min-height:120px;
+    padding:clamp(8px,1.8vw,14px);
     border-radius:clamp(10px,2.4vw,16px);
   }
   #categoryProgress .card .card-title{
     font-size:clamp(10px,1.9vw,13px);
     line-height:1.25;
+  }
+  #categoryProgress .card .card-share{
+    font-size:clamp(9px,1.6vw,11px);
+    color:var(--text-muted);
+    display:block;
+    margin-top:2px;
   }
   #categoryProgress .card .card-subtitle{font-size:clamp(9px,1.6vw,11px)}
   #categoryProgress .card .card-amount{font-size:clamp(13px,2.6vw,18px)}
@@ -241,10 +247,12 @@
   #categoryProgress .progress-shell{margin-top:clamp(6px,1.4vw,10px);height:clamp(6px,.95vw,8px)}
   #categoryProgress .progress-label{font-size:clamp(8px,1.5vw,10px)}
   @media (max-width:600px){
-    #categoryProgress{justify-content:center}
-    #categoryProgress .card{padding:clamp(6px,2.5vw,10px);min-width:160px;flex:1 1 calc(50% - var(--cat-gap));text-align:right}
-    #categoryProgress .card .card-title{line-height:1.2}
-    #categoryProgress .card .card-amount{font-weight:600}
+    #categoryProgress{justify-content:center;grid-template-columns:repeat(3,minmax(0,1fr))}
+    #categoryProgress .card{padding:clamp(8px,2.8vw,12px);min-width:0;text-align:right}
+    #categoryProgress .card .card-title{line-height:1.25;font-size:14px}
+    #categoryProgress .card .card-amount{font-weight:700;font-size:19px}
+    #categoryProgress .card .card-subtitle{font-size:11px}
+    #categoryProgress .card .card-share{font-size:11px}
     header h1{font-size:22px}
     .records-header{padding:12px}
     .records-inline-filters{grid-template-columns:1fr;gap:10px}
@@ -866,12 +874,14 @@ const DEFAULT_FIREBASE_CONFIG = {
         const perc = hasExpectation ? Math.min(Math.max(rawPerc,0),100) : 0;
         const alertState = hasExpectation && rawPerc >= 100;
         const progressLabel = hasExpectation ? `${Math.round(rawPerc)}%` : "—";
+        const shareOfTotal = totalExpenses > 0 ? Math.min(Math.max((sum/totalExpenses)*100,0),100) : 0;
         const card = document.createElement("div");
         card.className = "card category-card clickable";
         card.innerHTML = `
           <div class="card-header">
             <span class="card-title">${cat}</span>
           </div>
+          <small class="card-share">نسبة من الإجمالي: ${Math.round(shareOfTotal)}%</small>
           <div class="card-amount">${formatCurrency(sum)}</div>
           <div class="progress-shell" data-progress="${perc}" data-alert="${alertState}">
             <div class="progress-bar"></div>
