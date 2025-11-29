@@ -572,6 +572,13 @@ const DEFAULT_FIREBASE_CONFIG = {
   const numberFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0, minimumFractionDigits: 0 });
   const roundNumber = value => Math.round(Number(value) || 0);
   const formatNumber = value => numberFormatter.format(roundNumber(value));
+  const englishDateFormatter = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  const formatDate = value => {
+    if(!value) return "";
+    const parsed = new Date(value);
+    if(Number.isNaN(parsed.getTime())) return value;
+    return englishDateFormatter.format(parsed);
+  };
   const currencySymbol = '<span class="currency-symbol">﷼</span>';
   const formatCurrency = value => `${formatNumber(value)} ${currencySymbol}`;
   function renderCategoryModal(category){
@@ -608,7 +615,7 @@ const DEFAULT_FIREBASE_CONFIG = {
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td>${entry.id?.slice?.(0,6) || entry.id || ""}</td>
-          <td>${entry.date || ""}</td>
+          <td>${formatDate(entry.date)}</td>
           <td>${formatNumber(entry.amount || 0)}</td>
           <td>${getUserCode(entry.user)}</td>
           <td>${entry.notes || ""}</td>
@@ -1044,7 +1051,7 @@ const DEFAULT_FIREBASE_CONFIG = {
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td>${e.id?.slice?.(0,6)||e.id||""}</td>
-        <td>${e.date||""}</td>
+        <td>${formatDate(e.date)}</td>
         <td>${formatNumber(e.amount||0)}</td>
         <td>${e.category||""}</td>
         <td>${getUserCode(e.user)}</td>
@@ -1163,7 +1170,7 @@ const DEFAULT_FIREBASE_CONFIG = {
     const doc = new jsPDF({orientation:"l", unit:"pt"});
     doc.text("المصاريف الشخصية", 40, 30);
     const rows = filteredEntries.map(e=>[
-      e.id, e.date, formatNumber(e.amount||0),
+      e.id, formatDate(e.date), formatNumber(e.amount||0),
       e.category, getUserCode(e.user), e.notes||""
     ]);
     doc.autoTable({
@@ -1177,7 +1184,7 @@ const DEFAULT_FIREBASE_CONFIG = {
     const data = [
       ["#","التاريخ","المبلغ","الفئة","المستخدم","ملاحظات"],
       ...filteredEntries.map(e=>[
-        e.id, e.date, roundNumber(e.amount||0),
+        e.id, formatDate(e.date), roundNumber(e.amount||0),
         e.category, getUserCode(e.user), e.notes||""
       ])
     ];
