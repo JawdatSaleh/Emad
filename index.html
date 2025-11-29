@@ -61,7 +61,7 @@
   .progress-shell{position:relative;background:#e2e8f0;border-radius:12px;height:8px;overflow:hidden;margin-top:8px}
   .progress-bar{position:absolute;inset:0;height:100%;background:linear-gradient(90deg,var(--brand),var(--brand-dark));width:0%;transition:width .8s cubic-bezier(.4,0,.2,1)}
   .progress-shell[data-alert="true"] .progress-bar{background:linear-gradient(90deg,var(--danger),#fb7185)}
-  .progress-label{position:absolute;top:50%;inset-inline-start:50%;transform:translate(-50%,-50%);font-size:10px;font-weight:700;color:var(--text-main)}
+  .progress-label{position:absolute;top:50%;inset-inline-start:50%;transform:translate(-50%,-50%);font-size:10px;font-weight:700;color:var(--danger)}
   .currency-symbol{font-size:0.75em;opacity:0.85;margin-inline-start:4px;display:inline-block;}
 
   .modal-backdrop{position:fixed;inset:0;background:radial-gradient(circle at 20% 20%,rgba(37,99,235,.15),transparent 35%),rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:24px;z-index:2000;opacity:0;pointer-events:none;transition:opacity .3s ease}
@@ -988,10 +988,10 @@ const DEFAULT_FIREBASE_CONFIG = {
         const exp = expectedTotals[cat]||0;
         const hasExpectation = exp > 0;
         const rawPerc = hasExpectation ? (sum/exp*100) : 0;
-        const perc = hasExpectation ? Math.min(Math.max(rawPerc,0),100) : 0;
         const alertState = hasExpectation && rawPerc >= 100;
-        const progressLabel = hasExpectation ? `${Math.round(rawPerc)}%` : "—";
         const shareOfTotal = totalExpenses > 0 ? Math.min(Math.max((sum/totalExpenses)*100,0),100) : 0;
+        const perc = shareOfTotal;
+        const progressLabel = totalExpenses > 0 ? `${Math.round(shareOfTotal)}%` : "—";
         const card = document.createElement("div");
         card.className = "card category-card clickable";
         card.innerHTML = `
