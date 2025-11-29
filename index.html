@@ -156,6 +156,30 @@
   }
   .records-delete-btn:focus{outline:none;box-shadow:0 0 0 3px rgba(239,68,68,.2)}
 
+  .records-edit-btn{
+    width:36px;
+    height:36px;
+    border-radius:12px;
+    border:none;
+    background:rgba(37,99,235,.12);
+    color:var(--brand-dark);
+    font-size:18px;
+    font-weight:700;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    transition:background .25s ease,color .25s ease,transform .2s ease;
+    box-shadow:0 6px 12px rgba(37,99,235,.12);
+  }
+  .records-edit-btn:hover{
+    background:rgba(37,99,235,.2);
+    color:#fff;
+    transform:translateY(-2px);
+  }
+  .records-edit-btn:focus{outline:none;box-shadow:0 0 0 3px rgba(37,99,235,.2)}
+
+  .records-actions-cell{display:flex;gap:8px;align-items:center;justify-content:flex-start}
+
   .toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:12px 0 20px}
   .records-controls{margin-top:24px}
   .records-header{display:grid;grid-template-columns=minmax(240px,1fr) auto;gap:16px;align-items:center;margin-bottom:16px;padding:16px;border:1px solid #d7def6;border-radius:16px;background:linear-gradient(145deg,#fff,#eef3ff);box-shadow:0 6px 18px rgba(15,23,42,.06)}
@@ -171,8 +195,11 @@
   .records-inline-filters .button-field button{white-space:nowrap}
   .entry-controls{margin-top:16px}
   .entry-inline{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:14px;border-radius:16px;background:linear-gradient(145deg,#fff,#eef3ff);border:1px solid #d7def6;box-shadow:0 6px 18px rgba(15,23,42,.06)}
-  .entry-inline .entry-action{display:flex;align-items:center}
+  .entry-inline.editing{border-color:rgba(37,99,235,.4);box-shadow:0 10px 28px rgba(37,99,235,.08)}
+  .entry-inline .entry-action{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .entry-inline .entry-action button{min-width:110px;padding:12px 18px;border-radius:14px;font-weight:700;box-shadow:0 10px 20px rgba(10,143,90,.18)}
+  .entry-inline .entry-action .cancel-edit{background:rgba(15,23,42,.06);color:var(--text-main);box-shadow:none}
+  .entry-inline .entry-action .cancel-edit:hover{background:rgba(15,23,42,.12)}
   .entry-inline .entry-field{position:relative;display:flex;align-items:center;flex:1 1 150px;min-width:0;background:#fff;border:1px solid rgba(37,99,235,.14);border-radius:14px;padding-inline:12px;height:48px;box-shadow:0 6px 14px rgba(15,23,42,.04)}
   .entry-inline .entry-field input,
   .entry-inline .entry-field select{border:none;background:transparent;padding:0;width:100%;height:100%;font-size:14px}
@@ -304,7 +331,7 @@
   /******** Firebase ********/
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
   import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
-  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, serverTimestamp, query, orderBy, updateDoc } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const DEFAULT_FIREBASE_CONFIG = {
@@ -367,6 +394,7 @@ const DEFAULT_FIREBASE_CONFIG = {
   let entries = [];
   let filteredEntries = [];
   let currentUserEmail = null;
+  let editingEntryId = null;
 
   // التوقعات (تُستخدم للعرض فقط)
   const defaultExpected = {
@@ -401,6 +429,13 @@ const DEFAULT_FIREBASE_CONFIG = {
   const filterFrom = $("#filterFrom");
   const filterTo = $("#filterTo");
   const clearFiltersBtn = $("#clearFilters");
+  const entryForm = $("#entryForm");
+  const entryDateInput = $("#entryDate");
+  const entryAmountInput = $("#entryAmount");
+  const entryCategorySelect = $("#entryCategory");
+  const entryNotesInput = $("#entryNotes");
+  const entrySubmitButton = $("#entrySubmitButton");
+  const entryCancelEdit = $("#entryCancelEdit");
   const userArea = $("#userArea");
   const categoryModal = $("#categoryModal");
   const closeCategoryModalBtn = $("#closeCategoryModal");
@@ -432,6 +467,51 @@ const DEFAULT_FIREBASE_CONFIG = {
     shareCategoryModalBtn.dataset.originalText = shareCategoryModalBtn.textContent.trim();
     shareCategoryModalBtn.dataset.originalHtml = shareCategoryModalBtn.innerHTML;
   }
+
+  const ensureCategoryOptionExists = (value)=>{
+    if(!value || !entryCategorySelect) return;
+    const exists = Array.from(entryCategorySelect.options).some(opt=> opt.value === value);
+    if(!exists){
+      const opt = document.createElement("option");
+      opt.value = value;
+      opt.textContent = value;
+      entryCategorySelect.appendChild(opt);
+    }
+  };
+
+  const updateEntryActionLabels = ()=>{
+    const isEditing = Boolean(editingEntryId);
+    if(entryForm){
+      entryForm.classList.toggle("editing", isEditing);
+    }
+    if(entrySubmitButton){
+      entrySubmitButton.textContent = isEditing ? "تحديث السجل" : "إضافة";
+    }
+    if(entryCancelEdit){
+      entryCancelEdit.style.display = isEditing ? "inline-flex" : "none";
+    }
+  };
+
+  const resetEntryForm = ()=>{
+    if(entryDateInput){
+      entryDateInput.valueAsDate = new Date();
+    }
+    if(entryAmountInput){
+      entryAmountInput.value = "";
+    }
+    if(entryCategorySelect){
+      entryCategorySelect.value = "";
+    }
+    if(entryNotesInput){
+      entryNotesInput.value = "";
+    }
+    editingEntryId = null;
+    updateEntryActionLabels();
+  };
+
+  window.cancelEdit = ()=> resetEntryForm();
+
+  updateEntryActionLabels();
 
   const showLoginError = (message="")=>{
     if(!loginError) return;
@@ -715,7 +795,7 @@ const DEFAULT_FIREBASE_CONFIG = {
         showLoginError("");
         $("#userEmail").textContent = getUserCode(currentUserEmail);
         if(userArea) userArea.classList.add("visible");
-        $("#entryDate").valueAsDate = new Date();
+        resetEntryForm();
         populateCategories();
         await loadEntries();
       }else{
@@ -839,6 +919,33 @@ const DEFAULT_FIREBASE_CONFIG = {
     await deleteDoc(doc(db,"entries",id));
   }
 
+  window.editEntry = async (id)=>{
+    const current = entries.find(e=> e.id === id);
+    if(!current){
+      alert("السجل غير موجود.");
+      return;
+    }
+
+    ensureCategoryOptionExists(current.category);
+    if(entryDateInput){
+      entryDateInput.value = current.date || "";
+    }
+    if(entryAmountInput){
+      entryAmountInput.value = current.amount ?? "";
+    }
+    if(entryCategorySelect){
+      entryCategorySelect.value = current.category || "";
+    }
+    if(entryNotesInput){
+      entryNotesInput.value = current.notes || "";
+    }
+
+    editingEntryId = id;
+    updateEntryActionLabels();
+    entryDateInput?.focus();
+    entryForm?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+
   window.deleteEntry = async (id)=>{
     const password = prompt("يرجى إدخال كلمة المرور لحذف السجل:");
     if(password===null) return;
@@ -932,7 +1039,12 @@ const DEFAULT_FIREBASE_CONFIG = {
         <td>${e.category||""}</td>
         <td>${getUserCode(e.user)}</td>
         <td>${e.notes||""}</td>
-        <td><button class="records-delete-btn" type="button" onclick="deleteEntry('${e.id}')" title="حذف السجل" aria-label="حذف السجل">&times;</button></td>`;
+        <td>
+          <div class="records-actions-cell">
+            <button class="records-edit-btn" type="button" onclick="editEntry('${e.id}')" title="تعديل السجل" aria-label="تعديل السجل">✎</button>
+            <button class="records-delete-btn" type="button" onclick="deleteEntry('${e.id}')" title="حذف السجل" aria-label="حذف السجل">&times;</button>
+          </div>
+        </td>`;
       tbody.appendChild(tr);
     });
     if(tableFooterRow){
@@ -978,18 +1090,30 @@ const DEFAULT_FIREBASE_CONFIG = {
   /******** حفظ إدخال جديد ********/
   window.submitEntry = async ()=>{
     if(!currentUserEmail){ alert("يرجى تسجيل الدخول أولًا"); return; }
-    const date = $("#entryDate").value;
-    const amount = parseFloat($("#entryAmount").value);
-    const category = $("#entryCategory").value;
-    const notes = $("#entryNotes").value;
+    const date = entryDateInput?.value || "";
+    const amount = parseFloat(entryAmountInput?.value ?? "");
+    const category = entryCategorySelect?.value || "";
+    const notes = entryNotesInput?.value || "";
     if(!date || Number.isNaN(amount) || !category){
       alert("الرجاء إدخال جميع الحقول المطلوبة"); return;
     }
-    const entry = { date, type: "expense", amount, category, user: currentUserEmail, notes };
-    await saveEntry(entry);
-    $("#entryAmount").value=""; $("#entryNotes").value="";
+    const baseEntry = { date, type: "expense", amount, category, notes };
+    const existing = entries.find(e=> e.id === editingEntryId);
+
+    if(editingEntryId){
+      await updateDoc(doc(db,"entries", editingEntryId), {
+        ...baseEntry,
+        user: existing?.user || currentUserEmail,
+        updatedAt: serverTimestamp()
+      });
+      alert("تم تعديل السجل بنجاح.");
+    }else{
+      await saveEntry({ ...baseEntry, user: currentUserEmail });
+      alert("✅ تم الحفظ");
+    }
+
+    resetEntryForm();
     await loadEntries();
-    alert("✅ تم الحفظ");
   };
 
   /******** التصفية والبحث ********/
@@ -1164,9 +1288,10 @@ const DEFAULT_FIREBASE_CONFIG = {
 
   <h3 style="margin-top:16px">إضافة عملية</h3>
   <div class="entry-controls">
-    <div class="entry-inline">
+    <div id="entryForm" class="entry-inline">
       <div class="entry-action">
-        <button class="btn-okay" onclick="submitEntry()">إضافة</button>
+        <button id="entrySubmitButton" class="btn-okay" onclick="submitEntry()">إضافة</button>
+        <button id="entryCancelEdit" type="button" class="cancel-edit" onclick="cancelEdit()" style="display:none">إلغاء التعديل</button>
       </div>
       <div class="entry-field has-icon">
         <input type="date" id="entryDate">
