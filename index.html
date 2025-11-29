@@ -156,6 +156,30 @@
   }
   .records-delete-btn:focus{outline:none;box-shadow:0 0 0 3px rgba(239,68,68,.2)}
 
+  .records-edit-btn{
+    width:36px;
+    height:36px;
+    border-radius:12px;
+    border:none;
+    background:rgba(37,99,235,.12);
+    color:var(--brand-dark);
+    font-size:18px;
+    font-weight:700;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    transition:background .25s ease,color .25s ease,transform .2s ease;
+    box-shadow:0 6px 12px rgba(37,99,235,.12);
+  }
+  .records-edit-btn:hover{
+    background:rgba(37,99,235,.2);
+    color:#fff;
+    transform:translateY(-2px);
+  }
+  .records-edit-btn:focus{outline:none;box-shadow:0 0 0 3px rgba(37,99,235,.2)}
+
+  .records-actions-cell{display:flex;gap:8px;align-items:center;justify-content:flex-start}
+
   .toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:12px 0 20px}
   .records-controls{margin-top:24px}
   .records-header{display:grid;grid-template-columns=minmax(240px,1fr) auto;gap:16px;align-items:center;margin-bottom:16px;padding:16px;border:1px solid #d7def6;border-radius:16px;background:linear-gradient(145deg,#fff,#eef3ff);box-shadow:0 6px 18px rgba(15,23,42,.06)}
@@ -304,7 +328,7 @@
   /******** Firebase ********/
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
   import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
-  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, serverTimestamp, query, orderBy, updateDoc } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const DEFAULT_FIREBASE_CONFIG = {
@@ -839,6 +863,38 @@ const DEFAULT_FIREBASE_CONFIG = {
     await deleteDoc(doc(db,"entries",id));
   }
 
+  window.editEntry = async (id)=>{
+    const current = entries.find(e=> e.id === id);
+    if(!current){
+      alert("السجل غير موجود.");
+      return;
+    }
+
+    const newDate = prompt("تعديل التاريخ (YYYY-MM-DD)", current.date||"");
+    if(newDate === null) return;
+    const amountInput = prompt("تعديل المبلغ (﷼)", current.amount ?? "");
+    if(amountInput === null) return;
+    const parsedAmount = parseFloat(amountInput);
+    if(Number.isNaN(parsedAmount)){
+      alert("الرجاء إدخال مبلغ صالح.");
+      return;
+    }
+    const newCategory = prompt("تعديل الفئة", current.category||"");
+    if(newCategory === null) return;
+    const newNotes = prompt("تعديل الملاحظات", current.notes||"");
+    if(newNotes === null) return;
+
+    await updateDoc(doc(db,"entries",id), {
+      date: newDate,
+      amount: parsedAmount,
+      category: newCategory,
+      notes: newNotes,
+      updatedAt: serverTimestamp()
+    });
+    await loadEntries();
+    alert("تم تعديل السجل بنجاح.");
+  };
+
   window.deleteEntry = async (id)=>{
     const password = prompt("يرجى إدخال كلمة المرور لحذف السجل:");
     if(password===null) return;
@@ -932,7 +988,12 @@ const DEFAULT_FIREBASE_CONFIG = {
         <td>${e.category||""}</td>
         <td>${getUserCode(e.user)}</td>
         <td>${e.notes||""}</td>
-        <td><button class="records-delete-btn" type="button" onclick="deleteEntry('${e.id}')" title="حذف السجل" aria-label="حذف السجل">&times;</button></td>`;
+        <td>
+          <div class="records-actions-cell">
+            <button class="records-edit-btn" type="button" onclick="editEntry('${e.id}')" title="تعديل السجل" aria-label="تعديل السجل">✎</button>
+            <button class="records-delete-btn" type="button" onclick="deleteEntry('${e.id}')" title="حذف السجل" aria-label="حذف السجل">&times;</button>
+          </div>
+        </td>`;
       tbody.appendChild(tr);
     });
     if(tableFooterRow){
